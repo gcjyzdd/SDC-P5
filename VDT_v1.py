@@ -252,9 +252,9 @@ def trainSVC(cars, notcars, orient=9,
         dist_pickle["color_space"] = color_space
         localtime = time.localtime()
         timeString = time.strftime("%Y_%m_%d_%H_%M_%S", localtime)
-        pickle.dump(dist_pickle, open("./data/svc_pickle_complete_v2_" + timeString + ".p", "wb"))
+        pickle.dump(dist_pickle, open("./result/svc_pickle_complete_v2_" + timeString + ".p", "wb"))
 
-        file_path = "./data/train_records_v2.csv"
+        file_path = "./result/train_records_v2.csv"
         my_log_file = Path(file_path)
         if my_log_file.is_file():
             # file exists
