@@ -29,11 +29,29 @@ fh.setFormatter(formatter)
 logger.addHandler(fh)
 
 
+def convert_color(img, color_space='RGB'):
+    feature_image = None
+    if color_space != 'RGB':
+        if color_space == 'HSV':
+            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        elif color_space == 'LUV':
+            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2LUV)
+        elif color_space == 'HLS':
+            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+        elif color_space == 'YUV':
+            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2YUV)
+        elif color_space == 'YCrCb':
+            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2YCrCb)
+    else:
+        feature_image = np.copy(img)
+    return feature_image
+
+
 # Define a function to return HOG features and visualization
 def get_hog_features(img, orient, pix_per_cell, cell_per_block,
                      vis=False, feature_vec=True):
     # Call with two outputs if vis==True
-    if vis == True:
+    if vis:
         features, hog_image = hog(img, orientations=orient,
                                   pixels_per_cell=(pix_per_cell, pix_per_cell),
                                   cells_per_block=(cell_per_block, cell_per_block),
@@ -83,31 +101,19 @@ def single_img_features(img, color_space='RGB', spatial_size=(32, 32),
     # 1) Define an empty list to receive features
     img_features = []
     # 2) Apply color conversion if other than 'RGB'
-    if color_space != 'RGB':
-        if color_space == 'HSV':
-            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
-        elif color_space == 'LUV':
-            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2LUV)
-        elif color_space == 'HLS':
-            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
-        elif color_space == 'YUV':
-            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2YUV)
-        elif color_space == 'YCrCb':
-            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2YCrCb)
-    else:
-        feature_image = np.copy(img)
+    feature_image = convert_color(img, color_space)
     # 3) Compute spatial features if flag is set
-    if spatial_feat == True:
+    if spatial_feat:
         spatial_features = bin_spatial(feature_image, size=spatial_size)
         # 4) Append features to list
         img_features.append(spatial_features)
     # 5) Compute histogram features if flag is set
-    if hist_feat == True:
+    if hist_feat:
         hist_features = color_hist(feature_image, nbins=hist_bins)
         # 6) Append features to list
         img_features.append(hist_features)
     # 7) Compute HOG features if flag is set
-    if hog_feat == True:
+    if hog_feat:
         if hog_channel == 'ALL':
             hog_features = []
             for channel in range(feature_image.shape[2]):
@@ -124,9 +130,9 @@ def single_img_features(img, color_space='RGB', spatial_size=(32, 32),
     return np.concatenate(img_features)
 
 
-def extract_features(imgs, ext='jpeg', color_space='RGB', spatial_size=(32, 32),
+def extract_features(imgs, hog_channel, ext='jpeg', color_space='RGB', spatial_size=(32, 32),
                      hist_bins=32, orient=9,
-                     pix_per_cell=8, cell_per_block=2, hog_channel=0,
+                     pix_per_cell=8, cell_per_block=2,
                      spatial_feat=True, hist_feat=True, hog_feat=True):
     # Create a list to append feature vectors to
     features = []
@@ -138,7 +144,7 @@ def extract_features(imgs, ext='jpeg', color_space='RGB', spatial_size=(32, 32),
         if ext == 'png':
             image = image * 255
             image = image.astype(np.uint8)
-        feature = single_img_features(image, color_space='RGB', spatial_size=spatial_size,
+        feature = single_img_features(image, color_space=color_space, spatial_size=spatial_size,
                                       hist_bins=hist_bins, orient=orient,
                                       pix_per_cell=pix_per_cell, cell_per_block=cell_per_block, hog_channel=hog_channel,
                                       spatial_feat=spatial_feat, hist_feat=hist_feat, hog_feat=hog_feat)
@@ -176,15 +182,14 @@ def getFeaturesFromImages(cars, notcars, orient=9,
     :notcars image list of non-cars
     """
     t = time.time()
-    car_features = extract_features(cars, ext='png', color_space=color_space, spatial_size=spatial_size,
-                                    hist_bins=hist_bins, orient=orient,
-                                    pix_per_cell=pix_per_cell, cell_per_block=cell_per_block, hog_channel=hog_channel,
+    car_features = extract_features(cars, hog_channel, ext='png', color_space=color_space,
+                                    spatial_size=spatial_size, hist_bins=hist_bins, orient=orient,
+                                    pix_per_cell=pix_per_cell, cell_per_block=cell_per_block,
                                     spatial_feat=True, hist_feat=True, hog_feat=True)
 
-    notcar_features = extract_features(notcars, ext='png', color_space=color_space, spatial_size=spatial_size,
-                                       hist_bins=hist_bins, orient=orient,
+    notcar_features = extract_features(notcars, hog_channel, ext='png', color_space=color_space,
+                                       spatial_size=spatial_size, hist_bins=hist_bins, orient=orient,
                                        pix_per_cell=pix_per_cell, cell_per_block=cell_per_block,
-                                       hog_channel=hog_channel,
                                        spatial_feat=True, hist_feat=True, hog_feat=True)
     t2 = time.time()
     print(round(t2 - t, 2), 'Seconds to extract features...')
@@ -244,11 +249,12 @@ def trainSVC(cars, notcars, orient=9,
         dist_pickle["cell_per_block"] = cell_per_block
         dist_pickle["spatial_size"] = spatial_size
         dist_pickle["hist_bins"] = hist_bins
+        dist_pickle["color_space"] = color_space
         localtime = time.localtime()
         timeString = time.strftime("%Y_%m_%d_%H_%M_%S", localtime)
-        pickle.dump(dist_pickle, open("./data/svc_pickle_complete_" + timeString + ".p", "wb"))
+        pickle.dump(dist_pickle, open("./data/svc_pickle_complete_v2_" + timeString + ".p", "wb"))
 
-        file_path = "./data/train_records.csv"
+        file_path = "./data/train_records_v2.csv"
         my_log_file = Path(file_path)
         if my_log_file.is_file():
             # file exists
