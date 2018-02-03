@@ -23,7 +23,7 @@ def main():
     for orient in [9, 10, 12]:
         pix_per_cell = 8
         cell_per_block = 2
-        for color_space in ['YCrCb', 'RGB', 'HSL', 'HSV']:
+        for color_space in ['YCrCb', 'RGB', 'HLS', 'HSV', 'YUV', 'LUV']:
             hist_bins = 32
             spatial_size = 32
             for hog_channel in [0, 1, 2, 'ALL']:
@@ -34,7 +34,7 @@ def main():
                              color_space=color_space, hist_bins=hist_bins,
                              spatial_size=(spatial_size, spatial_size),
                              hog_channel=hog_channel)
-                    sys.exit()
+                    #sys.exit()
 
 
 if __name__ == "__main__":
