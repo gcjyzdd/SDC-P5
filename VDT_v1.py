@@ -29,6 +29,22 @@ fh.setFormatter(formatter)
 logger.addHandler(fh)
 
 
+# Define a function that takes an image, a list of bounding boxes,
+# and optional color tuple and line thickness as inputs
+# then draws boxes in that color on the output
+
+def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
+    # make a copy of the image
+    draw_img = np.copy(img)
+    # draw each bounding box on your image copy using cv2.rectangle()
+    # return the image copy with boxes drawn
+
+    for i in range(len(bboxes)):
+        cv2.rectangle(draw_img,bboxes[i][0], bboxes[i][1], color=color,
+                      thickness=thick)
+    return draw_img
+
+
 def convert_color(img, color_space='RGB'):
     feature_image = None
     if color_space != 'RGB':
