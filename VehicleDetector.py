@@ -4,12 +4,17 @@ from scipy.ndimage.measurements import label
 
 class VehicleDetector():
     def __init__(self, model_file, numbuf=5, thresh=1):
+        # Heat map
         self.heatMap = None
+        # Number of buffers
         self.NumBuf = numbuf
+        # Threshold of heat map
         self.threshold = thresh
+        # Store all detected boxes
         self.allBox = []
+        # Current detected boxes
         self.detectedBox = None
-
+        # Initialization flag
         self.Initialized = False
 
         # Load SVC model file
@@ -26,7 +31,11 @@ class VehicleDetector():
 
     @profile
     def detect(self, img):
+        """Detect vehicles on an image
 
+        :img input image
+        :return the input image with boxes
+        """
         if not self.Initialized:
             self.heatMap = np.zeros_like(img[:, :, 0]).astype(np.float)
 
@@ -56,8 +65,9 @@ class VehicleDetector():
         return draw_img
 
     def addheat(self):
+        """Accumulate heat"""
         for bbox_list in self.allBox:
-        # Iterate through list of bboxes
+            # Iterate through list of bboxes
             for box in bbox_list:
                 # Add += 1 for all pixels inside each bbox
                 # Assuming each "box" takes the form ((x1, y1), (x2, y2))
