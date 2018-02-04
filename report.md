@@ -28,7 +28,7 @@ The goals / steps of this project are the following:
 
 #### 1. Provide a Writeup / README that includes all the rubric points and how you addressed each one.  You can submit your writeup as markdown or pdf.  [Here](https://github.com/udacity/CarND-Vehicle-Detection/blob/master/writeup_template.md) is a template writeup for this project you can use as a guide and a starting point.  
 
-You're reading it!
+You're reading it! The IPython notebook file [VDT_v1.ipynb](VDT_v1.ipynb) is also helpful to see how I proceed this project.
 
 ### Histogram of Oriented Gradients (HOG)
 
@@ -94,43 +94,61 @@ to test an image called `test_img.jpg`. Run `python testSVC.py -h` to see more d
 
 #### 1. Describe how (and identify where in your code) you implemented a sliding window search.  How did you decide what scales to search and how much to overlap windows?
 
-I decided to search random window positions at random scales all over the image and came up with this (ok just kidding I didn't actually ;):
+I choosed to use four scales(lines 420-474 in [VDT_v1.py](./VDT_v1.py)) for different ROIs:
 
-<div style="text-align:center"><img width=100% src ='./examples/sliding_windows.jpg' /></div>
+1. scale 3: 
+    * xstart = 0
+    * ystart = 400
+    * xstop = img.shape[1]
+    * ystop = 656
+2. scale 2:
+    * xstart = 0
+    * ystart = 400
+    * xstop = img.shape[1]
+    * ystop = 600
+3. scale 1:
+    * xstart = 400
+    * ystart = 400
+    * xstop = 1000
+    * ystop = 500
+4. scale 0.5:
+    * xstart = 700
+    * ystart = 405
+    * xstop = 900
+    * ystop = 440
+
+The overall idea is to set the scale large near the image bottom and to set the scale small near the image center. And the overlap of searching windows is 6/8 = 75%.
+
+Below is the example image of those sliding windows for each scale:
+
+<div style="text-align:center"><img width=100% src ='./output_images/output_scales.png' /></div>
 
 
 #### 2. Show some examples of test images to demonstrate how your pipeline is working.  What did you do to optimize the performance of your classifier?
 
-Ultimately I searched on two scales using YCrCb 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a nice result.  Here are some example images:
+Ultimately I searched on three scales(1,2,3) using `LUV` 3-channel `HOG` features plus spatially binned color and histograms of color in the feature vector, which provided a nice result. Here are results of six test images:
 
-<div style="text-align:center"><img width=100% src ='./examples/sliding_window.jpg' /></div>
+<div style="text-align:center"><img width=100% src ='./output_images/output_tests.png' /></div>
+
+The `scale 0.5` was discarded because I found it didn't help to detect small vehicles. Multithreading was adoptted to speed up the code but the fps didn't improve much.
 
 ---
 
 ### Video Implementation
 
 #### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (somewhat wobbly or unstable bounding boxes are ok as long as you are identifying the vehicles most of the time with minimal false positives.)
-Here's a [link to my video result](./project_video.mp4)
+
+Here's a [link to my video result](./output_images/project_output.mp4)
 
 
 #### 2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
 
-I recorded the positions of positive detections in each frame of the video.  From the positive detections I created a heatmap and then thresholded that map to identify vehicle positions.  I then used `scipy.ndimage.measurements.label()` to identify individual blobs in the heatmap.  I then assumed each blob corresponded to a vehicle.  I constructed bounding boxes to cover the area of each blob detected.  
+1. I recorded the positions of positive detections of last `NumBuf` frame of the video
+2. From the positive detections I created a heatmap and then thresholded that map to identify vehicle positions
+3. I then used `scipy.ndimage.measurements.label()` to identify individual blobs in the heatmap
+4. I then assumed each blob corresponded to a vehicle. I constructed bounding boxes to cover the area of each blob detected.
 
-Here's an example result showing the heatmap from a series of frames of video, the result of `scipy.ndimage.measurements.label()` and the bounding boxes then overlaid on the last frame of video:
-
-### Here are six frames and their corresponding heatmaps:
-
-<div style="text-align:center"><img width=100% src ='./examples/bboxes_and_heat.png' /></div>
-
-
-### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
-<div style="text-align:center"><img width=100% src ='./examples/labels_map.png' /></div>
-
-### Here the resulting bounding boxes are drawn onto the last frame in the series:
-<div style="text-align:center"><img width=100% src ='./examples/output_bboxes.png' /></div>
-
-
+The code of video pipeline implementation is cell 9-15 and the `VehicleDetector` class is defined in [VehicleDetector.py](./VehicleDetector.py).
 
 ---
 
@@ -138,5 +156,12 @@ Here's an example result showing the heatmap from a series of frames of video, t
 
 #### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+Problems:
 
+  1. The detection was not correct in the beginning and it took me a while to figure out the scaling of features along with `PNG` and `JPG` image formats
+  2. My code is running slow (2fps). I tried to use `threading` and `multiprocessing.Queue` module to speed up but the speed is still slow.
+  3. It seems that the obtained linear SVC is not accurate enought as there still are some false positives after using heat map.
+
+The pipeline is dependent on the training dataset and view perspective of the camera. As a result, it would likely to fail if a vehicle is not included in the dataset, for example, a forklift or a car trailer. In addition, the searching windows are mainly located in the center and bottom parts of the image; if the camera was significantly tilted down, the pipeline probably does not work.
+
+In the result output video, the detected boxes are not very stable and sometimes they are tilted from frame to frame. To enhance stability of detections, we could perform a tracking algorithm like `mean-shift`. What's more, we can augment the training dataset to get a better SVC.
