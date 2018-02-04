@@ -432,9 +432,9 @@ def classifyImg(img, svc, X_scaler, color_space,
                          orient, pix_per_cell, cell_per_block, spatial_size,
                          hist_bins)
 
-    xstart = 200
+    xstart = 0
     ystart = 400
-    xstop = 1100
+    xstop = img.shape[1]
     ystop = 600
     scale = 2
 
@@ -445,9 +445,9 @@ def classifyImg(img, svc, X_scaler, color_space,
 
     box_list.extend(box_list2)
 
-    xstart = 0
+    xstart = 400
     ystart = 400
-    xstop = img.shape[1]
+    xstop = 1000
     ystop = 500
     scale = 1
 
@@ -458,10 +458,10 @@ def classifyImg(img, svc, X_scaler, color_space,
 
     box_list.extend(box_list2)
 
-    xstart = 620
+    xstart = 700
     ystart = 405
-    xstop = 880
-    ystop = 460
+    xstop = 900
+    ystop = 440
     scale = 0.5
 
     box_list2 = find_cars(img, color_space, xstart, ystart, xstop, ystop,
