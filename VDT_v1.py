@@ -231,9 +231,10 @@ def getFeaturesFromImages(cars, notcars, orient=9,
                           hist_bins=32,
                           spatial_size=(32, 32),
                           hog_channel='ALL'):
-    """Get features for training
+    """Get features of list of images for training
     :cars image list of cars
     :notcars image list of non-cars
+    :returns X_train, y_train, X_test, y_test, X_scaler
     """
     t = time.time()
     car_features = extract_features(cars, hog_channel, ext='png', color_space=color_space,
@@ -282,7 +283,13 @@ def trainSVC(cars, notcars, orient=9,
                                                                        color_space=color_space, hist_bins=hist_bins,
                                                                        spatial_size=spatial_size,
                                                                        hog_channel=hog_channel)
-
+    """Train a linear SVC using labeled images.
+    This function saves the trained model to file with time stamp.
+    
+    Input params:
+    :cars list of car images
+    :notcars list of not-car images
+    """
     # Use a linear SVC
     svc = LinearSVC()
     # Check the training time for the SVC
@@ -294,6 +301,7 @@ def trainSVC(cars, notcars, orient=9,
     acc = svc.score(X_test, y_test)
     print('Test Accuracy of SVC = ', round(acc, 4))
 
+    # Save the model file with time stamp
     if 1:
         dist_pickle = {}
         dist_pickle["svc"] = svc
@@ -309,8 +317,8 @@ def trainSVC(cars, notcars, orient=9,
         pickle.dump(dist_pickle, open("./result/svc_pickle_complete_v2_" + timeString + ".p", "wb"))
 
         file_path = "./result/train_records_v2.csv"
-        my_log_file = Path(file_path)
-        if my_log_file.is_file():
+        my_result_file = Path(file_path)
+        if my_result_file.is_file():
             # file exists
             with open(file_path, 'a', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile, delimiter=',')
@@ -335,7 +343,11 @@ def trainSVC(cars, notcars, orient=9,
 
 
 @profile
-def find_cars(img, color_space, xstart, ystart, xstop, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins):
+def find_cars(img, color_space,
+              xstart, ystart, xstop, ystop,
+              scale, svc, X_scaler,
+              orient, pix_per_cell, cell_per_block,
+              spatial_size, hist_bins):
     """Find cars in an image
     :return list of boxes
     """
@@ -413,7 +425,7 @@ def classifyImg(img, svc, X_scaler, color_space,
     ystart = 400
     xstop = img.shape[1]
     ystop = 656
-    scale = 4
+    scale = 3
 
     box_list = find_cars(img, color_space, xstart, ystart, xstop, ystop,
                          scale, svc, X_scaler,
