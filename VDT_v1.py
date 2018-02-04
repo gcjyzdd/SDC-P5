@@ -16,6 +16,9 @@ import argparse
 from pathlib import Path
 import csv
 
+from multiprocessing import Queue
+import threading
+
 
 ### define profilers (https://stackoverflow.com/questions/3620943/measuring-elapsed-time-with-the-time-module)
 PROF_DATA = {}
@@ -343,7 +346,7 @@ def trainSVC(cars, notcars, orient=9,
 
 
 @profile
-def find_cars(img, color_space,
+def find_cars(q, img, color_space,
               xstart, ystart, xstop, ystop,
               scale, svc, X_scaler,
               orient, pix_per_cell, cell_per_block,
@@ -414,12 +417,57 @@ def find_cars(img, color_space,
 
                 box_list.append([(xbox_left + xstart, ytop_draw + ystart),
                                  (xbox_left + xstart + win_draw, ytop_draw + win_draw + ystart)])
-    return box_list  # draw_img
+    q.put(box_list)
+    # return box_list  # draw_img
+
+
+q = Queue()
 
 
 def classifyImg(img, svc, X_scaler, color_space,
          orient, pix_per_cell, cell_per_block,
          spatial_size, hist_bins):
+
+    box_list = []
+
+    xstart = 500
+    ystart = 400
+    xstop = 1200
+    ystop = 550
+    scale = 1
+
+    t = threading.Thread(target=find_cars, args=(q, img, color_space, xstart, ystart, xstop, ystop,
+                                                 scale, svc, X_scaler,
+                                                 orient, pix_per_cell, cell_per_block, spatial_size,
+                                                 hist_bins))
+    t.daemon = True
+    t.start()
+
+    xstart = 200
+    ystart = 400
+    xstop = img.shape[1]
+    ystop = 600
+    scale = 2
+
+    t = threading.Thread(target=find_cars, args=(q, img, color_space, xstart, ystart, xstop, ystop,
+                                                 scale, svc, X_scaler,
+                                                 orient, pix_per_cell, cell_per_block, spatial_size,
+                                                 hist_bins))
+    t.daemon = True
+    t.start()
+
+    # xstart = 700
+    # ystart = 405
+    # xstop = 900
+    # ystop = 440
+    # scale = 0.5
+    #
+    # t = threading.Thread(target=find_cars, args=(q, img, color_space, xstart, ystart, xstop, ystop,
+    #                                              scale, svc, X_scaler,
+    #                                              orient, pix_per_cell, cell_per_block, spatial_size,
+    #                                              hist_bins))
+    # t.daemon = True
+    # t.start()
 
     xstart = 0
     ystart = 400
@@ -427,50 +475,15 @@ def classifyImg(img, svc, X_scaler, color_space,
     ystop = 656
     scale = 3
 
-    box_list = find_cars(img, color_space, xstart, ystart, xstop, ystop,
-                         scale, svc, X_scaler,
-                         orient, pix_per_cell, cell_per_block, spatial_size,
-                         hist_bins)
+    t = threading.Thread(target=find_cars, args=(q, img, color_space, xstart, ystart, xstop, ystop,
+                                                 scale, svc, X_scaler,
+                                                 orient, pix_per_cell, cell_per_block, spatial_size,
+                                                 hist_bins))
+    t.daemon = True
+    t.start()
 
-    xstart = 0
-    ystart = 400
-    xstop = img.shape[1]
-    ystop = 600
-    scale = 2
-
-    box_list2 = find_cars(img, color_space, xstart, ystart, xstop, ystop,
-                          scale, svc, X_scaler,
-                          orient, pix_per_cell, cell_per_block, spatial_size,
-                          hist_bins)
-
-    box_list.extend(box_list2)
-
-    xstart = 400
-    ystart = 400
-    xstop = 1000
-    ystop = 500
-    scale = 1
-
-    box_list2 = find_cars(img, color_space, xstart, ystart, xstop, ystop,
-                          scale, svc, X_scaler,
-                          orient, pix_per_cell, cell_per_block, spatial_size,
-                          hist_bins)
-
-    box_list.extend(box_list2)
-
-    xstart = 700
-    ystart = 405
-    xstop = 900
-    ystop = 440
-    scale = 0.5
-
-    box_list2 = find_cars(img, color_space, xstart, ystart, xstop, ystop,
-                          scale, svc, X_scaler,
-                          orient, pix_per_cell, cell_per_block, spatial_size,
-                          hist_bins)
-
-    box_list.extend(box_list2)
-
+    for j in range(3):
+        box_list.extend(q.get())
     return box_list
 
 
