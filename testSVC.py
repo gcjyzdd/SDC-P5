@@ -8,6 +8,8 @@ def main():
     parser.add_argument('-svc', '--svc_path',
                         default='./result/svc_pickle_complete_v2_2018_02_04_05_06_04.p',
                         help='Path of the SVC model file')
+    parser.add_argument('-save_path', '--save_path',
+                        help='Path to save the output image')
 
     args = vars(parser.parse_args())
 
@@ -45,6 +47,8 @@ def main():
 
     out_img = draw_boxes(img, box_list)
     plt.imshow(out_img)
+    if args['save_path']:
+        plt.savefig(args['save_path'], bbox_inches="tight")
     plt.show()
 
 
