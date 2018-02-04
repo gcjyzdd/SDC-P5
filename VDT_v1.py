@@ -6,7 +6,7 @@ from skimage.feature import hog
 import matplotlib.pyplot as plt
 import time
 import glob
-
+from functools import wraps
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
@@ -15,6 +15,44 @@ import logging
 import argparse
 from pathlib import Path
 import csv
+
+
+### define profilers (https://stackoverflow.com/questions/3620943/measuring-elapsed-time-with-the-time-module)
+PROF_DATA = {}
+
+
+def profile(fn):
+    @wraps(fn)
+    def with_profiling(*args, **kwargs):
+        start_time = time.time()
+
+        ret = fn(*args, **kwargs)
+
+        elapsed_time = time.time() - start_time
+
+        if fn.__name__ not in PROF_DATA:
+            PROF_DATA[fn.__name__] = [0, []]
+        PROF_DATA[fn.__name__][0] += 1
+        PROF_DATA[fn.__name__][1].append(elapsed_time)
+
+        return ret
+
+    return with_profiling
+
+
+def print_prof_data():
+    for fname, data in PROF_DATA.items():
+        max_time = max(data[1])
+        avg_time = sum(data[1]) / len(data[1])
+        print("Function %s called %d times. " % (fname, data[0]))
+        print('Execution time max: %.3f, average: %.3f' % (max_time, avg_time))
+
+
+def clear_prof_data():
+    global PROF_DATA
+    PROF_DATA = {}
+
+### end of profiler
 
 logger = logging.getLogger("VDT_v1")
 logger.setLevel(logging.INFO)
@@ -296,9 +334,11 @@ def trainSVC(cars, notcars, orient=9,
     print(round(t2 - t, 5), 'Seconds to predict', n_predict, 'labels with SVC')
 
 
+@profile
 def find_cars(img, color_space, xstart, ystart, xstop, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins):
-    # draw_img = np.copy(img)
-    #img = img.astype(np.float32) / 255
+    """Find cars in an image
+    :return list of boxes
+    """
 
     box_list = []
 
@@ -398,6 +438,19 @@ def classifyImg(img, svc, X_scaler, color_space,
     xstop = img.shape[1]
     ystop = 500
     scale = 1
+
+    box_list2 = find_cars(img, color_space, xstart, ystart, xstop, ystop,
+                          scale, svc, X_scaler,
+                          orient, pix_per_cell, cell_per_block, spatial_size,
+                          hist_bins)
+
+    box_list.extend(box_list2)
+
+    xstart = 620
+    ystart = 405
+    xstop = 880
+    ystop = 460
+    scale = 0.5
 
     box_list2 = find_cars(img, color_space, xstart, ystart, xstop, ystop,
                           scale, svc, X_scaler,

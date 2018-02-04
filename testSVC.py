@@ -1,11 +1,12 @@
 from VDT_v1 import *
+from scipy.ndimage.measurements import label
 
 
 def main():
     parser = argparse.ArgumentParser(description='Test Linear SVC.')
     parser.add_argument('-im', '--im_path', help='Input the image path', required=True)
     parser.add_argument('-svc', '--svc_path',
-                        default='./result/svc_pickle_complete_v2_2018_02_03_15_19_24.p',
+                        default='./result/svc_pickle_complete_v2_2018_02_04_05_06_04.p',
                         help='Path of the SVC model file')
 
     args = vars(parser.parse_args())
@@ -26,6 +27,21 @@ def main():
     box_list = classifyImg(img, svc, X_scaler, color_space,
                 orient, pix_per_cell, cell_per_block,
                 spatial_size, hist_bins)
+
+    heat = np.zeros_like(img[:, :, 0]).astype(np.float)
+
+    # Add heat to each box in box list
+    heat = add_heat(heat, box_list)
+
+    # Apply threshold to help remove false positives
+    heat = apply_threshold(heat, 0)
+
+    # Visualize the heatmap when displaying
+    heatmap = np.clip(heat, 0, 255)
+
+    # Find final boxes from heatmap using label function
+    labels = label(heatmap)
+    draw_img = draw_labeled_bboxes(np.copy(img), labels)
 
     out_img = draw_boxes(img, box_list)
     plt.imshow(out_img)
